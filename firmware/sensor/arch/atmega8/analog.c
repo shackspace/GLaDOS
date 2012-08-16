@@ -36,6 +36,7 @@ int analogRead(uint8_t pin) {
 
 void adc_init() {
   // enable and init ADC for ~150kHZ
+  //  -> prescaling by 128
   rs232_sendString("Initialising ADC ... ");
   ADCSRA = (1<<ADEN) | (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0);
   rs232_sendString("OK\r\n");

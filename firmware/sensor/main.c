@@ -11,15 +11,22 @@ int main() {
   rs232_sendString("\r\n\r\n--- GLaDOS --- \r\n");
   rs232_sendString("GLaDOS sensor-board booting up...\r\n");
 
-
   //   - initialise the sensors.
-  //     enable ADC, set prescaler to F_CPU / 128 = 156 kHZ
   adc_init();
   
   //   - setup CAN-interface
   rs232_sendString("Initialising CAN-Bus interface...");
-  can_init(BITRATE_125_KBPS);
-  rs232_sendString("OK\r\n");
+  DDRD = _BV(5);
+  PORTD ^= _BV(5);
+  PORTD |= _BV(5);
+
+  // Versuche den MCP2515 zu initilaisieren
+  if (!can_init(BITRATE_125_KBPS)) {
+    rs232_sendString("Error (MCP2515 timeout)!\r\n");
+	for (;;);
+  } else {
+    rs232_sendString("OK\r\n");
+  }
 
   // initialisation complete: begin measuring.
   rs232_sendString("\r\n\r\nBeginning measurements: \r\n");
