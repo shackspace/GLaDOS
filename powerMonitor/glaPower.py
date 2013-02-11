@@ -14,24 +14,15 @@ def storeSensorValueInRedis(meterSerial, timestamp, channelName, value):
     redisConnection.zadd(baseKey, value, score)
     return
 
+def storeSensorConfigurationInRedis(meterSerial):
+    "stores the sensor configuration in redis."
+    baseKey = "sensordata.shackspace." + meterSerial + ".config.sensors"
+    value = "{\"L1.Voltage\": {\"unit\": \"V\", \"type\":\"actual\"},\"L2.Voltage\": {\"unit\": \"V\", \"type\":\"actual\"},\"L3.Voltage\": {\"unit\": \"V\", \"type\":\"actual\"},\"L1.Current\": {\"unit\": \"A\", \"type\":\"actual\"},\"L2.Current\": {\"unit\": \"A\", \"type\":\"actual\"},\"L3.Current\": {\"unit\": \"A\", \"type\":\"actual\"},\"L1.Power\": {\"unit\": \"W\", \"type\":\"actual\"},\"L2.Power\": {\"unit\": \"W\", \"type\":\"actual\"},\"L3.Power\": {\"unit\": \"W\", \"type\":\"actual\"},\"Total\": {\"unit\": \"W\", \"type\":\"cummulative\"}}";
 
-# Create a TCP/IP socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    redisConnection.set(baseKey, value)
+    return
 
-# connect to redis.
-redisConnection = redis.Redis("glados.shack")
-
-# define regex for parsing.
-regexPower = re.compile("[+][0-9]+[*]")
-regexCurrent = re.compile("[0-9.]+[*]A")
-regexVoltage = re.compile("[0-9.]+[*]V")
-regexReading = re.compile("1-0:1\.8\..\*255\(([0-9.]+)\)")
-regexSerial = re.compile("1-0:0\.0\.0\*255\(([0-9]+)\)")
-regexEpochTime = re.compile("\w[0-9]+\w{8,}")
-server_address = ('powerraw.shack', 11111)
-epochtime_old = 0
-while True:
-
+def readPowerMeterValue(server_adress):
     # Connect the socket to the port where the server is listening
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(server_address)
@@ -50,6 +41,36 @@ while True:
     finally:
         sock.close()
     
+    return data_received;
+
+
+# Create a TCP/IP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# connect to redis.
+redisConnection = redis.Redis("glados.shack")
+
+# define regex for parsing.
+regexPower = re.compile("[+][0-9]+[*]")
+regexCurrent = re.compile("[0-9.]+[*]A")
+regexVoltage = re.compile("[0-9.]+[*]V")
+regexReading = re.compile("1-0:1\.8\..\*255\(([0-9.]+)\)")
+regexSerial = re.compile("1-0:0\.0\.0\*255\(([0-9]+)\)")
+regexEpochTime = re.compile("\w[0-9]+\w{8,}")
+server_address = ('powerraw.shack', 11111)
+epochtime_old = 0
+
+# read one sample to extract the serial of the 
+data_received = readPowerMeterValue(server_address)
+meterId = regexSerial.search(data_received).group(1)
+storeSensorConfigurationInRedis(meterId);
+
+# read the redis value
+while True:
+    # read a data sample.
+    data_received = readPowerMeterValue(server_address)
+
+    # check if it's a new value
     epochTime = regexEpochTime.findall(data_received)
     if epochtime_old != epochTime[0]:
         epochtime_old = epochTime[0]
@@ -57,7 +78,6 @@ while True:
         voltages = regexVoltage.findall(data_received)
         powerUsage = regexPower.findall(data_received)
         totalReading = regexReading.search(data_received).groups()
-        meterId = regexSerial.search(data_received).group(1)
 
         # create a json object with the data.
         storeSensorValueInRedis(meterId, epochTime[0], "L1.Voltage", voltages[0].strip("*V"));
