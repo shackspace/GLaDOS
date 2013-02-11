@@ -81,17 +81,10 @@ while True:
         totalReading = regexReading.search(data_received).groups()
 
         # create a json object with the data.
-        storeSensorValueInRedis(meterId, epochTime[0], "L1.Voltage", voltages[0].strip("*V"));
-        storeSensorValueInRedis(meterId, epochTime[0], "L2.Voltage", voltages[1].strip("*V"));
-        storeSensorValueInRedis(meterId, epochTime[0], "L3.Voltage", voltages[2].strip("*V"));
-
-        storeSensorValueInRedis(meterId, epochTime[0], "L1.Current", currents[0].strip("*A"));
-        storeSensorValueInRedis(meterId, epochTime[0], "L2.Current", currents[1].strip("*A"));
-        storeSensorValueInRedis(meterId, epochTime[0], "L3.Current", currents[2].strip("*A"));
-
-        storeSensorValueInRedis(meterId, epochTime[0], "L1.Power", powerUsage[0].strip("+*"));
-        storeSensorValueInRedis(meterId, epochTime[0], "L2.Power", powerUsage[0].strip("+*"));
-        storeSensorValueInRedis(meterId, epochTime[0], "L3.Power", powerUsage[0].strip("+*"));
+        for i in range(1,3):
+          storeSensorValueInRedis(meterId, epochTime[0], "L"+i+".Voltage", voltages[i].strip("*V"));
+          storeSensorValueInRedis(meterId, epochTime[0], "L"+i+".Current", currents[i].strip("*A"));
+          storeSensorValueInRedis(meterId, epochTime[0], "L"+i+".Power",   powerUsage[i].strip("+*"));
 
         storeSensorValueInRedis(meterId, epochTime[0], "Total", totalReading[0]);
 
