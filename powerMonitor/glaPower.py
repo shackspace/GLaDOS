@@ -11,7 +11,7 @@ def storeSensorValueInRedis(meterSerial, timestamp, channelName, value):
     "stores a sensor reading in redis."
     baseKey = "sensordata.shackspace." + meterSerial + ".data." + channelName
     score = timestamp
-    value = "[" + timestamp + "," + value  + "]";
+    value = "[" + timestamp + "," + re.sub("^0*", "", value) + "]";
     redisConnection.rpush(baseKey, value)
     return
 
