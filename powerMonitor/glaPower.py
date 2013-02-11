@@ -7,13 +7,19 @@ import time
 import redis
 
 
+def storeSensorValueInRedis(meterSerial, timestamp, channelName, value):
+    "stores a sensor reading in redis."
+    baseKey = "sensordata.shackspace." + meterSerial + ".data." + channelName
+    score = timestamp
+    redisConnection.zadd(baseKey, value, score)
+    return
+
+
 # Create a TCP/IP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# Connect the socket to the port where the server is listening
-
 # connect to redis.
-redisConnection = redis.Redis("localhost")
+redisConnection = redis.Redis("glados.shack")
 
 # define regex for parsing.
 regexPower = re.compile("[+][0-9]+[*]")
@@ -25,7 +31,8 @@ regexEpochTime = re.compile("\w[0-9]+\w{8,}")
 server_address = ('powerraw.shack', 11111)
 epochtime_old = 0
 while True:
-    
+
+    # Connect the socket to the port where the server is listening
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(server_address)
     
@@ -53,6 +60,19 @@ while True:
         meterId = regexSerial.search(data_received).group(1)
 
         # create a json object with the data.
+        storeSensorValueInRedis(meterId, epochTime[0], "L1.Voltage", voltages[0].strip("*V"));
+        storeSensorValueInRedis(meterId, epochTime[0], "L2.Voltage", voltages[1].strip("*V"));
+        storeSensorValueInRedis(meterId, epochTime[0], "L3.Voltage", voltages[2].strip("*V"));
+
+        storeSensorValueInRedis(meterId, epochTime[0], "L1.Current", currents[0].strip("*A"));
+        storeSensorValueInRedis(meterId, epochTime[0], "L2.Current", currents[1].strip("*A"));
+        storeSensorValueInRedis(meterId, epochTime[0], "L3.Current", currents[2].strip("*A"));
+
+        storeSensorValueInRedis(meterId, epochTime[0], "L1.Power", powerUsage[0].strip("+*"));
+        storeSensorValueInRedis(meterId, epochTime[0], "L2.Power", powerUsage[0].strip("+*"));
+        storeSensorValueInRedis(meterId, epochTime[0], "L3.Power", powerUsage[0].strip("+*"));
+
+        storeSensorValueInRedis(meterId, epochTime[0], "Total", totalReading[0]);
 
         #TODO: Update redis for every phase
         print "Meter   : " + meterId 
