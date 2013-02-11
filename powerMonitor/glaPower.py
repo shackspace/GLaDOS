@@ -81,10 +81,10 @@ while True:
         totalReading = regexReading.search(data_received).groups()
 
         # create a json object with the data.
-        for i in range(1,3):
-          storeSensorValueInRedis(meterId, epochTime[0], "L"+i+".Voltage", voltages[i].strip("*V"));
-          storeSensorValueInRedis(meterId, epochTime[0], "L"+i+".Current", currents[i].strip("*A"));
-          storeSensorValueInRedis(meterId, epochTime[0], "L"+i+".Power",   powerUsage[i].strip("+*"));
+        for i in range(0,3):
+          storeSensorValueInRedis(meterId, epochTime[0], "L"+str(1+i)+".Voltage", voltages[i].strip("*V"));
+          storeSensorValueInRedis(meterId, epochTime[0], "L"+str(1+i)+".Current", currents[i].strip("*A"));
+          storeSensorValueInRedis(meterId, epochTime[0], "L"+str(1+i)+".Power",   powerUsage[i].strip("+*"));
 
         storeSensorValueInRedis(meterId, epochTime[0], "Total", totalReading[0]);
 
