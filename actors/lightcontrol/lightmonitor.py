@@ -53,6 +53,6 @@ while True:
   
   # write to REDIS-DB
   updateRedisDB(lightID, status, int(time.time()))
-	print "Light " + str(lightID) + " set to " + str(status);
+  print "Light " + str(lightID) + " set to " + str(status);
 
 
