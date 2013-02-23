@@ -5,7 +5,7 @@ import redis
 import time
 
 
-now = int(time.time())
+now = time.time()
 
 channelNameForPulses = "Pulse"
 channelNameForPowerReading = "Power"
@@ -17,13 +17,13 @@ PULSES_PER_KWH = 800; # the energy meter does things like this
 
 def storeSensorValueInRedis(baseKeyData, channelName, timestamp, value):
   "stores a sensor reading in redis"
-  value = "[" + str(1000*timestamp) + "," + str(value) + "]"
+  value = "[" + str(int(1000*timestamp)) + "," + str(value) + "]"
   redisConnection.rpush(baseKeyData + channelName, value)
   return
 
 def storePulseInRedis(baseKeyData, channelName, timestamp):
   "stores a sensor reading in redis"
-  value = "["+ str(1000*timestamp) +"]"
+  value = "["+ str(int(1000*timestamp)) +"]"
   redisConnection.rpush(baseKeyData + channelName, value)
   return
 
@@ -52,7 +52,7 @@ averagePulseTime = sample / 7.0
 measurementTime = int(data[7].strip("[]")) - int(data[0].strip("[]"));
 
 # calculate the aprox power consumption
-pulsesPerHour = 3600 / averagePulseTime
+pulsesPerHour = 3600000 / averagePulseTime
 powerConsumption = int((1000 * pulsesPerHour) / PULSES_PER_KWH);
 
 # store the power consumption data.
