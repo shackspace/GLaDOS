@@ -19,12 +19,17 @@ def writeRedisSensorDescription():
   redisConnection.set(baseKey, value) 
   return
 
-def updateRedisDB(lightID, status, timestamp):
+def updateRedisDB(pipe, lightID, status, timestamp):
   "write a sample to the redis db"
   channelName = "Light" + str(lightID) + ".state"
   baseKey = "sensordata.shackspace." + str(sensorID) + ".data." + channelName
-  value = "[" + str(timestamp) + "," + str(status)  + "]";
-  redisConnection.rpush(baseKey, value)
+  value = "[" + str(timestamp*1000) + "," + str(status)  + "]";
+
+  try:
+    pipe.rpush(baseKey, value)
+  except:
+    print "Redis Connection lost, trying to reconnect."
+    redisConnection = redis.Redis("glados.shack")
 
   return;
 
@@ -41,7 +46,7 @@ sock.bind(("0.0.0.0", 2342))
 
 # connect to the redis database.
 redisConnection = redis.Redis("glados.shack")
-writeRedisSensorDescription();
+writeRedisSensorDescription()
 
 # loop and read the socket to get the information on changes in the lights.
 while True:
@@ -52,7 +57,8 @@ while True:
   lightID, status = unpack("BB", packet); 
   
   # write to REDIS-DB
-  updateRedisDB(lightID, status, int(time.time()))
+  updateRedisDB(redisConnection, lightID, status, int(time.time()))
+
   print "Light " + str(lightID) + " set to " + str(status);
 
 

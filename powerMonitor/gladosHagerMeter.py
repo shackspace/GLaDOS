@@ -7,12 +7,11 @@ import time
 import redis
 
 
-def storeSensorValueInRedis(meterSerial, timestamp, channelName, value):
+def storeSensorValueInRedis(pipe, meterSerial, timestamp, channelName, value):
     "stores a sensor reading in redis."
     baseKey = "sensordata.shackspace." + meterSerial + ".data." + channelName
-    score = timestamp
-    value = "[" + timestamp + "," + re.sub("^0*", "", value) + "]";
-    redisConnection.rpush(baseKey, value)
+    value = "[" + str(1000*long(timestamp)) + "," + re.sub("^0*", "", value) + "]";
+    pipe.rpush(baseKey, value)
     return
 
 def storeSensorConfigurationInRedis(meterSerial):
@@ -29,16 +28,15 @@ def readPowerMeterValue(server_adress):
     sock.connect(server_address)
     
     try:
-        # Look for the response
-        amount_received = 0
-        amount_expected = 23 # dirty hack but its okay since the powerraw device will close the connection for us
-        data_received = ""
-        while amount_received < amount_expected:
-            data = sock.recv(25000)
-            amount_received += len(data)
-            data_received += data
-        #    print >>sys.stderr, 'received "%s"' % data
-    
+      # Look for the response
+      amount_received = 0
+      amount_expected = 23 # dirty hack but its okay since the powerraw device will close the connection for us
+      data_received = ""
+      while amount_received < amount_expected:
+          data = sock.recv(25000)
+          amount_received += len(data)
+          data_received += data
+      #    print >>sys.stderr, 'received "%s"' % data
     finally:
         sock.close()
     
@@ -74,28 +72,34 @@ while True:
     # check if it's a new value
     epochTime = regexEpochTime.findall(data_received)
     if epochtime_old != epochTime[0]:
-        epochtime_old = epochTime[0]
-        currents = regexCurrent.findall(data_received)
-        voltages = regexVoltage.findall(data_received)
-        powerUsage = regexPower.findall(data_received)
-        totalReading = regexReading.search(data_received).groups()
+      epochtime_old = epochTime[0]
+      currents = regexCurrent.findall(data_received)
+      voltages = regexVoltage.findall(data_received)
+      powerUsage = regexPower.findall(data_received)
+      totalReading = regexReading.search(data_received).groups()
 
-        # create a json object with the data.
+      # create a json object with the data.
+      try:
+        pipe = redisConnection.pipeline(transaction=True)
         for i in range(0,3):
-          storeSensorValueInRedis(meterId, epochTime[0], "L"+str(1+i)+".Voltage", voltages[i].strip("*V"));
-          storeSensorValueInRedis(meterId, epochTime[0], "L"+str(1+i)+".Current", currents[i].strip("*A"));
-          storeSensorValueInRedis(meterId, epochTime[0], "L"+str(1+i)+".Power",   powerUsage[i].strip("+*"));
+          storeSensorValueInRedis(pipe, meterId, epochTime[0], "L"+str(1+i)+".Voltage", voltages[i].strip("*V"));
+          storeSensorValueInRedis(pipe, meterId, epochTime[0], "L"+str(1+i)+".Current", currents[i].strip("*A"));
+          storeSensorValueInRedis(pipe, meterId, epochTime[0], "L"+str(1+i)+".Power",   powerUsage[i].strip("+*"));
+          
+        storeSensorValueInRedis(pipe, meterId, epochTime[0], "Total", totalReading[0]);
+        pipe.execute()
+      except: 
+        print "Error contacting redis. Trying to reconnect."
+        redisConnection = redis.Redis("glados.shack")
 
-        storeSensorValueInRedis(meterId, epochTime[0], "Total", totalReading[0]);
-
-        #TODO: Update redis for every phase
-        print "Meter   : " + meterId 
-        print "Time    : " + epochTime[0]
-        print "Voltage : " + voltages[0].strip("*V") + " / " + voltages[1].strip("*V") + " / " + voltages[2].strip("*V")
-        print "Current : " + currents[0].strip("*A") + " / " + currents[1].strip("*A") + " / " + currents[2].strip("*A")
-        print "Power   : " + powerUsage[0].strip("+*") + " / " + powerUsage[1].strip("+*") + " / " + powerUsage[2].strip("+*")
-        print "Consumed: " + totalReading[0]
-        print "=="
+      # TODO: Update redis for every phase
+      print "Meter   : " + meterId 
+      print "Time    : " + epochTime[0]
+      print "Voltage : " + voltages[0].strip("*V") + " / " + voltages[1].strip("*V") + " / " + voltages[2].strip("*V")
+      print "Current : " + currents[0].strip("*A") + " / " + currents[1].strip("*A") + " / " + currents[2].strip("*A")
+      print "Power   : " + powerUsage[0].strip("+*") + " / " + powerUsage[1].strip("+*") + " / " + powerUsage[2].strip("+*")
+      print "Consumed: " + totalReading[0]
+      print "=="
 
     time.sleep(1)
 

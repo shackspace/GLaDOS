@@ -17,13 +17,13 @@ PULSES_PER_KWH = 800; # the energy meter does things like this
 
 def storeSensorValueInRedis(baseKeyData, channelName, timestamp, value):
   "stores a sensor reading in redis"
-  value = "[" + str(timestamp) + "," + str(value) + "]"
+  value = "[" + str(1000*timestamp) + "," + str(value) + "]"
   redisConnection.rpush(baseKeyData + channelName, value)
   return
 
 def storePulseInRedis(baseKeyData, channelName, timestamp):
   "stores a sensor reading in redis"
-  value = "["+ str(timestamp) +"]"
+  value = "["+ str(1000*timestamp) +"]"
   redisConnection.rpush(baseKeyData + channelName, value)
   return
 
